@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<!-- saved from url=(0126)https://googlechrome.github.io/samples/web-bluetooth/get-characteristics.html?service=alert_notification&characteristic=0x7c80 -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+	<script type="text/javascript" src="./Web Bluetooth _ Get Characteristics Sample_files/three.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>	
+    
+	<link rel="icon" href="./Web Bluetooth _ Get Characteristics Sample_files/wrlds label_icon.png">
+    <title>WRLDS / Connected products for smart companies</title>
+    <script>
+      // Add a global error event listener early on in the page load, to help ensure that browsers
+      // which don't support specific functionality still end up displaying a meaningful message.
+      window.addEventListener('error', function(error) {
+        if (ChromeSamples && ChromeSamples.setStatus) {
+          console.error(error);
+          ChromeSamples.setStatus(error.message + ' (Your browser may not support this feature.)');
+          error.preventDefault();
+        }
+      });
+    </script>
+    
+<body>
+<!-- <script> -->
+  <!-- if('serviceWorker' in navigator) { -->
+    <!-- navigator.serviceWorker.register('service-worker.js'); -->
+  <!-- } -->
+<!-- </script> -->
+
+<script>
+  window.addEventListener('DOMContentLoaded', function() {
+    const searchParams = new URL(location).searchParams;
+    const inputs = Array.from(document.querySelectorAll('input[id]'));
+
+    inputs.forEach(input => {
+      if (searchParams.has(input.id)) {
+        if (input.type == 'checkbox') {
+          input.checked = searchParams.get(input.id);
+        } else {
+          input.value = searchParams.get(input.id);
+          input.blur();
+        }
+      }
+      if (input.type == 'checkbox') {
+        input.addEventListener('change', function(event) {
+          const newSearchParams = new URL(location).searchParams;
+          if (event.target.checked) {
+            newSearchParams.set(input.id, event.target.checked);
+          } else {
+            newSearchParams.delete(input.id);
+          }
+          history.replaceState({}, '', Array.from(newSearchParams).length ?
+              location.pathname + '?' + newSearchParams : location.pathname);
+        });
+      } else {
+        input.addEventListener('input', function(event) {
+          const newSearchParams = new URL(location).searchParams;
+          if (event.target.value) {
+            newSearchParams.set(input.id, event.target.value);
+          } else {
+            newSearchParams.delete(input.id);
+          }
+          history.replaceState({}, '', Array.from(newSearchParams).length ?
+              location.pathname + '?' + newSearchParams : location.pathname);
+        });
+      }
+    });
+  });
+</script>
+
+<!-- <div class="w3-cell-row"> -->
+<!-- 1 -->
+<div class="w3-container w3-center">
+  <img src="./Web Bluetooth _ Get Characteristics Sample_files/wrlds label_copy2.png" width="25%" height="25%" alt= "WRLDS">
+</div>
+<!-- 2 -->
+<div class="w3-container w3-center" >
+	  <form>
+	  <!-- <input id="service" type="text" list="services" autofocus="" placeholder="Bluetooth Service"> -->
+	  <!-- <input id="characteristic" type="text" list="characteristics" placeholder="Optional Bluetooth Characteristic"> -->
+	  <!-- <button>Get characteristics</button> -->
+	  
+	  <label for="allDevices">All Devices</label>
+	  <input id="allDevices" type="checkbox">
+	  <input id="namePrefix" type="text" size="17" list="namePrefixs" placeholder="Device Name Prefix">
+	  <input id="name" type="text" size="17" list="devices" placeholder="Device Name">  
+	  <input id="service" type="text" size="17" list="services" placeholder="Service">
+	  <input id="characteristic" type="text" size="17" list="characteristics" placeholder="Characteristics">
+	  <!-- <button id="connect">Connect</button> -->
+	  <input type="button" id="ConnectBtn" value="Connect" />
+	  <!-- <button id="startNotifications">Start notifications</button> -->
+	  <!-- <button id="stopNotifications">Stop notifications</button> -->
+	</form>
+
+	<datalist id="namePrefixs">
+	  <option value="WRLDS">WRLDS</option>
+	  <option value="Nordic">Nordic</option>
+	  <option value="Playfinity">Playfinity</option>
+	</datalist>
+
+	<datalist id="services">
+	  <option value="alert_notification">alert_notification</option>
+	  <option value="battery_service">battery_service</option>
+	</datalist>
+
+	<datalist id="characteristics">
+	  <option value="0x7c80">ACC</option>
+	  <option value="0x7c83">Gyro</option>
+	  <option value="0x7c84">Quaternion</option>
+	</datalist>
+</div>
+<!-- 3 -->
+<div class="w3-container w3-center">
+
+	<div class="w3-row">
+		<div class="w3-col w3-container" style="width:70%">
+			<div id="chart"></div>
+			<button onclick="openFullscreen();">Open in Fullscreen Mode</button>
+			<!-- <button onclick="startSaving();">Start Saving</button> -->
+			<!-- <button onclick="startSaving();">Start Saving</button> -->
+			<input type="button" id="SaveBtn" value="Start Saving Data" />
+			<!-- <button onclick="stopSaving();">Stop Saving</button> -->
+		</div>
+	
+		<div class="w3-col w3-container" style="width:30%">
+			<canvas id="myCanvas" width="100" height="100" style="border:1px solid #ffffff;"></canvas>
+		</div> 
+	</div>
+</div>
+<!-- 4 -->
+<div class="w3-container">
+	<section class="main-container">
+			  <div class="myo-data">
+				<ul class="w3-ul">
+				  <li class="data">Accelerometer X data: <span class="accelerometer-x-data"></span></li>
+				  <li class="data">Accelerometer Y data: <span class="accelerometer-y-data"></span></li>
+				  <li class="data">Accelerometer Z data: <span class="accelerometer-z-data"></span></li>
+				  <li class="data">Gyroscope X data: <span class="gyroscope-x-data"></span></li>
+				  <li class="data">Gyroscope Y data: <span class="gyroscope-y-data"></span></li>
+				  <li class="data">Gyroscope Z data: <span class="gyroscope-z-data"></span></li>
+				  <li class="data">Quaternion X data: <span class="orientation-x-data"></span></li>
+				  <li class="data">Quaternion Y data: <span class="orientation-y-data"></span></li>
+				  <li class="data">Quaternion Z data: <span class="orientation-z-data"></span></li>
+				  <li class="data">Quaternion W data: <span class="orientation-w-data"></span></li>
+				</ul>
+			  </div>
+
+	  <!-- <div class="container"> -->
+		<!-- <img class="pose-image" src="" alt=""> -->
+	  <!-- </div> -->
+	</section>
+</div>
+<!-- 5 -->
+<div class="w3-container">
+<h3>Live Output</h3>
+<div id="output" class="output">
+  <div id="content"></div>
+  <div id="status"></div>
+  <pre id="log"></pre>
+</div>
+</div>
+<!-- </div> -->
+
+<!-- Util -->
+<script>
+
+let block = [];
+ 
+<!-- document.getElementById("demo").innerHTML = d.getTime(); -->
+  var ChromeSamples = {
+    log: function() {
+	  
+      var line = '\n' + Array.prototype.slice.call(arguments).map(function(argument) {
+        return typeof argument === 'string' ? argument : JSON.stringify(argument);
+      }).join(' ');
+	  <!-- let a = []; -->
+	  block.push(line);
+	  <!-- console.log((block).slice(-2)); -->
+	  <!-- document.querySelector('#log').textContent = (a.push(line)).slice(-10);  -->
+	  <!-- a.push(value.getUint8(i).toString(16)).slice(-2); -->
+	  document.querySelector('#log').textContent = ((block).slice(-10));
+      <!-- document.querySelector('#log').textContent += line + '\n'; -->
+	  <!-- if(document.querySelector('#log').textContent.length > 571) -->
+	  <!-- { -->
+		<!-- document.querySelector('#log').textContent = ''; -->
+	  <!-- } -->
+    },
+
+    clearLog: function() {
+      document.querySelector('#log').textContent = '';
+    },
+
+    setStatus: function(status) {
+      document.querySelector('#status').textContent = status;
+    },
+
+    setContent: function(newContent) {
+      var content = document.querySelector('#content');
+      while(content.hasChildNodes()) {
+        content.removeChild(content.lastChild);
+      }
+      content.appendChild(newContent);
+    }
+  };
+</script>
+
+<script>
+var SaveBtn = document.getElementById("SaveBtn");
+
+SaveBtn.addEventListener("click", StartSavingData);
+
+function StartSavingData(){
+    Is_startSaving = true;
+	console.log("Start Saving Data....");
+	
+    SaveBtn.removeEventListener("click", StartSavingData);
+    SaveBtn.addEventListener("click", StopSavingData);
+    SaveBtn.value = "Stop Saving Data";
+}
+
+function StopSavingData(){
+	Is_startSaving = false;
+	console.log("Stop Saving Data....");
+	exportToCsv('export.csv', external_a);
+	external_a.length = 0;
+	
+    SaveBtn.removeEventListener("click", StopSavingData);
+    SaveBtn.addEventListener("click", StartSavingData);
+    SaveBtn.value = "Start Saving Data";
+}
+</script>
+
+
+<script>
+var elem = document.getElementById("chart");
+function openFullscreen() {
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.mozRequestFullScreen) { /* Firefox */
+    elem.mozRequestFullScreen();
+  } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) { /* IE/Edge */
+    elem.msRequestFullscreen();
+  }
+}
+</script>
+
+<script>
+  if (/Chrome\/(\d+\.\d+.\d+.\d+)/.test(navigator.userAgent)){
+    // Let's log a warning if the sample is not supposed to execute on this
+    // version of Chrome.
+    if (50 > parseInt(RegExp.$1)) {
+      ChromeSamples.setStatus('Warning! Keep in mind this sample has been tested with Chrome ' + 50 + '.');
+    }
+  }
+</script>
+
+
+<script>
+var ConnectBtn = document.getElementById("ConnectBtn");
+
+ConnectBtn.addEventListener("click", StartConnect);
+
+
+function StartConnect() {
+    console.log("Connecting");
+    ConnectBtn.removeEventListener("click", StartConnect);
+    ConnectBtn.addEventListener("click", DisConnect);
+    ConnectBtn.value = "DisConnect";
+	
+  let filters = [];
+
+  let serviceUuid = document.querySelector('#service').value;
+  if (serviceUuid.startsWith('0x')) {
+    serviceUuid = parseInt(serviceUuid);
+  }
+  if (serviceUuid) {
+    filters.push({services: [serviceUuid]});
+  }
+
+  let filterName = document.querySelector('#name').value;
+  if (filterName) {
+    filters.push({name: filterName});
+  }
+
+  let filterNamePrefix = document.querySelector('#namePrefix').value;
+  if (filterNamePrefix) {
+    filters.push({namePrefix: filterNamePrefix});
+  }
+  
+  let characteristicUuid = document.querySelector('#characteristic').value;
+  if (characteristicUuid.startsWith('0x')) {
+    characteristicUuid = parseInt(characteristicUuid);
+  } 
+
+  let options = {};
+  if (document.querySelector('#allDevices').checked) {
+    options.acceptAllDevices = true;
+  } else {
+    options.filters = filters;
+  }
+  
+  <!-- let serviceUuid = document.querySelector('#service').value; -->
+  <!-- if (serviceUuid.startsWith('0x')) { -->
+    <!-- serviceUuid = parseInt(serviceUuid); -->
+  <!-- } -->
+
+  <!-- let characteristicUuid = document.querySelector('#characteristic').value; -->
+  <!-- if (characteristicUuid.startsWith('0x')) { -->
+    <!-- characteristicUuid = parseInt(characteristicUuid); -->
+  <!-- } -->
+
+  log('Requesting Bluetooth Device...');
+  log('with ' + JSON.stringify(options));
+  navigator.bluetooth.requestDevice(options)
+  <!-- navigator.bluetooth.requestDevice({filters: [{services: [serviceUuid]}]}) -->
+  .then(device => {
+    log('Connecting to GATT Server...');
+	bluetoothDevice = device;
+    bluetoothDevice.addEventListener('gattserverdisconnected', DisConnect);
+    return device.gatt.connect();
+  })
+  .then(server => {
+    log('Getting Service...');
+    return server.getPrimaryService(serviceUuid);
+  })
+  .then(service => {
+    log('Getting Characteristic...');
+    return service.getCharacteristic(characteristicUuid);
+  })
+  .then(characteristic => {
+    myCharacteristic = characteristic;
+    return myCharacteristic.startNotifications().then(_ => {
+      log('> Notifications started');
+      myCharacteristic.addEventListener('characteristicvaluechanged',
+          handleNotifications);
+    });
+  })
+ .then(value => {
+	log('> Characteristics: ' +
+		value.getUint8(0));
+  })
+  .catch(error => {
+    log('Argh! ' + error);
+  });
+}
+
+function DisConnect() {
+
+	ConnectBtn.removeEventListener("click", DisConnect);
+    ConnectBtn.addEventListener("click", StartConnect);
+    ConnectBtn.value = "Connect";
+	
+  if (!bluetoothDevice) {
+    return;
+  }
+  log('Disconnecting from Bluetooth Device...');
+  if (bluetoothDevice.gatt.connected) {
+    bluetoothDevice.gatt.disconnect();
+	console.log("Disconnecting");
+	ChromeSamples.clearLog();
+  } else {
+    log('> Bluetooth Device is already disconnected');
+  }
+}
+
+function onStopButtonClick() {
+  if (myCharacteristic) {
+    myCharacteristic.stopNotifications()
+    .then(_ => {
+      log('> Notifications stopped');
+      myCharacteristic.removeEventListener('characteristicvaluechanged',
+          handleNotifications);
+    })
+    .catch(error => {
+      log('Argh! ' + error);
+    });
+  }
+}
+
+function exportToCsv(filename, rows) {
+        var processRow = function (row) {
+            var finalVal = '';
+            for (var j = 0; j < row.length; j++) {
+                var innerValue = row[j] === null ? '' : row[j].toString();
+                if (row[j] instanceof Date) {
+                    innerValue = row[j].toLocaleString();
+                };
+                var result = innerValue.replace(/"/g, '""');
+                if (result.search(/("|,|\n)/g) >= 0)
+                    result = '"' + result + '"';
+                if (j > 0)
+                    finalVal += ',';
+                finalVal += result;
+            }
+            return finalVal + '\n';
+        };
+
+        var csvFile = '';
+        for (var i = 0; i < rows.length; i++) {
+            csvFile += processRow(rows[i]);
+        }
+
+        var blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8;' });
+        if (navigator.msSaveBlob) { // IE 10+
+            navigator.msSaveBlob(blob, filename);
+        } else {
+            var link = document.createElement("a");
+            if (link.download !== undefined) { // feature detection
+                // Browsers that support HTML5 download attribute
+                var url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+    }
+
+var batteryLevel;	
+var external_a = []; 
+var Is_startSaving = false;
+function handleNotifications(event) {
+  let value = event.target.value;
+  let a = [];
+  let b = [];
+
+  // Convert raw data bytes to hex values just for the sake of showing something.
+  // In the "real" world, you'd use data.getUint8, data.getUint16 or even
+  // TextDecoder to process raw data bytes.
+  for (let i = 0; i < value.byteLength; i++) {
+    a.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
+  }
+  a.push(" : " + (new Date()).getTime());
+  log('> ' + a.join(' '));
+  
+  batteryLevel = a.join(' ');
+
+  displayData();
+  
+  if(Is_startSaving)
+  {
+	external_a.push(a);
+  }
+  <!-- exportToCsv('export.csv', a); -->
+  
+  <!-- for (let i = 0; i < value.byteLength; i++) { -->
+    <!-- a.push((value.getUint8(i).toString(16)).slice(-2)); -->
+  <!-- } -->
+  <!-- log('> ' + a.join(' ')); -->
+}
+
+function displayData(){
+    if(batteryLevel){
+      var batteryLevelDiv = document.getElementsByClassName('accelerometer-y-data')[0];
+      batteryLevelDiv.innerHTML = batteryLevel;
+    }  
+
+}
+</script>
+
+<!-- <script> -->
+  <!-- document.querySelector('form').addEventListener('submit', function(event) { -->
+    <!-- event.stopPropagation(); -->
+    <!-- event.preventDefault(); -->
+
+    <!-- if (isWebBluetoothEnabled()) { -->
+      <!-- ChromeSamples.clearLog(); -->
+      <!-- onButtonClick(); -->
+    <!-- } -->
+  <!-- }); -->
+  
+  
+    <!-- document.querySelector('#connect').addEventListener('click', function(event) { -->
+    <!-- event.stopPropagation(); -->
+    <!-- event.preventDefault(); -->
+
+    <!-- if (isWebBluetoothEnabled()) { -->
+      <!-- ChromeSamples.clearLog(); -->
+      <!-- onButtonClick(); -->
+    <!-- } -->
+  <!-- }); -->
+  
+  <!-- document.querySelector('#stopNotifications').addEventListener('click', function(event) { -->
+    <!-- event.stopPropagation(); -->
+    <!-- event.preventDefault(); -->
+
+    <!-- if (isWebBluetoothEnabled()) { -->
+      <!-- onStopButtonClick(); -->
+    <!-- } -->
+  <!-- }); -->
+<!-- </script> -->
+
+<script>
+  log = ChromeSamples.log;
+
+  function isWebBluetoothEnabled() {
+    if (navigator.bluetooth) {
+      return true;
+    } else {
+      ChromeSamples.setStatus('Web Bluetooth API is not available.\n' +
+          'Please make sure the "Experimental Web Platform features" flag is enabled.');
+      return false;
+    }
+  }
+</script>
+
+<script>
+  /* jshint ignore:start */
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-53563471-1', 'auto');
+  ga('send', 'pageview');
+  /* jshint ignore:end */
+</script>
+
+<script>
+   init();
+   render();
+
+  function init(){
+    scene = new THREE.Scene();
+	scene.background = new THREE.Color( 0xffffff );
+	camera = new THREE.PerspectiveCamera(50, 500 / 400, 0.1, 1000);
+    <!-- camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.001, 10 ); -->
+
+    <!-- renderer = new THREE.WebGLRenderer({alpha: true, antialias: true}); -->
+	renderer = new THREE.WebGLRenderer( { canvas: myCanvas } );
+	renderer.setSize(300, 300);
+    <!-- renderer.setSize( window.innerWidth, window.innerHeight ); -->
+    <!-- document.getElementsByClassName('container')[0].appendChild( renderer.domElement ); -->
+
+    // var loader = new THREE.JSONLoader()
+    // loader.load('myo.json', function(geometry){
+    //   var material = new THREE.MeshPhongMaterial( { color: 0x888899, shininess: 15, side: THREE.DoubleSide } );
+		// 		mesh = new THREE.Mesh( geometry, material );
+    //     mesh.rotation.x = 0.5;
+    //     mesh.scale.set(0.5, 0.5, 0.5);
+		// 		scene.add( mesh );
+    // })
+
+    var geometry = new THREE.BoxGeometry(1, 1, 1);
+    var material = new THREE.MeshPhongMaterial({color: 0x888899, shininess: 15, side: THREE.DoubleSide });
+    mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.x = 0.5;
+    scene.add(mesh);
+
+    var light = new THREE.HemisphereLight( 0xddddff, 0x808080, 0.7 );
+  			light.position.set( 0, 1, 0 );
+  			scene.add( light );
+
+	var light = new THREE.DirectionalLight( 0xffffff, 0.6 );
+		light.position.set( 1, 1, 1 );
+		scene.add( light );
+
+	var light = new THREE.DirectionalLight( 0xffffff, 0.4 );
+		light.position.set( 1, -1, 1 );
+		scene.add( light );
+
+    camera.position.z = 5;
+  }
+
+  function render(){
+      requestAnimationFrame(render);
+	  mesh.rotation.x += 0.01;
+	  mesh.rotation.y += 0.01;
+      renderer.render(scene, camera);
+  }
+</script>  
+
+<script>
+		var lastDate = 0;
+        var data = []
+        var TICKINTERVAL = 86400000 //milisecs in one day
+        let XAXISRANGE = 777600000
+        function getDayWiseTimeSeries(baseval, count, yrange) {
+            var i = 0;
+            while (i < count) {
+                var x = baseval;
+                var y = Math.floor(Math.random() * (yrange.max - yrange.min + 1)) + yrange.min;
+
+                data.push({
+                    x, y
+                });
+                lastDate = baseval
+                baseval += TICKINTERVAL;
+                i++;
+            }
+        }
+
+        getDayWiseTimeSeries(new Date('4 Oct 2019 GMT').getTime(), 10, {
+            min: 10,
+            max: 90
+        })
+
+        function getNewSeries(baseval, yrange) {
+            var newDate = baseval + TICKINTERVAL;
+            lastDate = newDate
+
+            for(var i = 0; i< data.length - 10; i++) {
+                // IMPORTANT
+                // we reset the x and y of the data which is out of drawing area
+                // to prevent memory leaks
+                data[i].x = newDate - XAXISRANGE - TICKINTERVAL
+                data[i].y = 0
+            }
+            
+            data.push({
+                x: newDate,
+                y: Math.floor(Math.random() * (yrange.max - yrange.min + 1)) + yrange.min
+            })
+           
+        }
+
+        function resetData(){
+            // Alternatively, you can also reset the data at certain intervals to prevent creating a huge series 
+            data = data.slice(data.length - 10, data.length);
+        }
+
+        var options = {
+            chart: {
+                height: 350,
+                type: 'line',
+                animations: {
+                    enabled: true,
+                    easing: 'linear',
+                    dynamicAnimation: {
+                        speed: 1000
+                    }
+                },
+                toolbar: {
+                    show: false
+                },
+                zoom: {
+                    enabled: false
+                }
+            },
+            dataLabels: {
+                enabled: false
+            },
+            stroke: {
+                curve: 'smooth'
+            },
+            series: [{
+                data: data
+            }],
+            title: {
+                <!-- text: 'Dynamic Updating Chart', -->
+                <!-- align: 'left' -->
+            },
+            markers: {
+                size: 0
+            },
+            xaxis: {
+                type: 'datetime',
+                range: XAXISRANGE,
+            },
+            yaxis: {
+                max: 100
+            },
+            legend: {
+                show: false
+            },
+        }
+
+        var chart = new ApexCharts(
+            document.querySelector("#chart"),
+            options
+        );
+
+        chart.render();
+	
+       
+
+         window.setInterval(function () {
+         getNewSeries(lastDate, {
+                 min: 10,
+                 max: 90
+             })
+             chart.updateSeries([{
+                 data: data
+             }])
+         }, 1000)
+        
+</script> 
+</body>
+</html>   
+    
+    
+ 
