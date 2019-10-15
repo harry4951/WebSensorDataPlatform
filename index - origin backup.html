@@ -116,7 +116,10 @@
 
 	<div class="w3-row">
 		<div class="w3-col w3-container" style="width:70%">
-			<div id="chart"></div>
+			<!-- <div id="chart"></div> -->
+			<br>
+			<canvas id="myChart" width="800" height="400" style="border:1px solid #c3c3c3;"></canvas>
+			<br>
 			<button onclick="openFullscreen();">Open in Fullscreen Mode</button>
 			<!-- <button onclick="startSaving();">Start Saving</button> -->
 			<!-- <button onclick="startSaving();">Start Saving</button> -->
@@ -124,11 +127,70 @@
 			<!-- <button onclick="stopSaving();">Stop Saving</button> -->
 		</div>
 	
-		<div class="w3-col w3-container" style="width:30%">
+		<div class="w3-col w3-container" style="width:10%">
 			<canvas id="myCanvas" width="100" height="100" style="border:1px solid #ffffff;"></canvas>
 		</div> 
 	</div>
 </div>
+
+<script>
+var heartRates = [];
+var mode = 'bar';
+var canvas = document.getElementById("myChart");
+function drawWaves() {
+    requestAnimationFrame(() => {
+    <!-- canvas.width = parseInt(getComputedStyle(canvas).width.slice(0, -2)) * devicePixelRatio;//Dynamically changed -->
+    <!-- canvas.height = parseInt(getComputedStyle(canvas).height.slice(0, -2)) * devicePixelRatio; -->
+    var context = canvas.getContext('2d');
+    var margin = 2;
+    var max = Math.max(0, Math.round(canvas.width / 50));//11
+    var offset = Math.max(0, heartRates.length - max);
+    // console.log(max);
+    var height_offset = Math.max(0, Math.round(canvas.height / 3)); 
+    var width_offset = Math.max(0, Math.round(canvas.height / 2));
+    /**
+      * Removes the first element from an heartRates array.
+      */
+    if(heartRates.length >= 50)
+    {
+      heartRates.shift();
+    }
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#00796B';
+    if (mode === 'bar') 
+    {
+      	 context.beginPath();
+  
+         // for (var i = 0; i < Math.max(heartRates.length, max)- 1; i++) 
+         for (var i = 0; i < 50; i++) 
+         {
+           // if(heartRates[i + offset ] >= 0)
+           if(heartRates[i] >= 0)
+           {
+           console.log(heartRates.length);
+           console.log(heartRates[i]);
+           var barHeight = Math.round((heartRates[i]) * canvas.height / 2000 * 20);
+           context.rect(11 * i + margin + width_offset, canvas.height - barHeight - height_offset, margin, Math.max(0, barHeight - margin));
+           context.stroke();
+           }
+           // else if(heartRates[i + offset ] < 0)
+           else if(heartRates[i] < 0)
+           {
+            var barHeight = -1 * Math.round((heartRates[i]) * canvas.height / 2000 * 20);
+            //console.log(barHeight);
+            context.rect(11 * i + margin + width_offset, canvas.height - height_offset, margin, Math.max(0, barHeight - margin));
+            context.stroke();
+           }
+         
+         // }
+      //context.closePath();
+     	} 
+  	}}
+  );
+}
+</script>
+
 <!-- 4 -->
 <div class="w3-container">
 	<section class="main-container">
@@ -421,8 +483,10 @@ function exportToCsv(filename, rows) {
             }
         }
     }
-
-var batteryLevel;	
+var state = {};
+var AccValue;
+var GyroValue;	
+var QuaternionValue;
 var external_a = []; 
 var Is_startSaving = false;
 function handleNotifications(event) {
@@ -438,10 +502,77 @@ function handleNotifications(event) {
   }
   a.push(" : " + (new Date()).getTime());
   log('> ' + a.join(' '));
-  
-  batteryLevel = a.join(' ');
+  let characteristicUuid = document.querySelector('#characteristic').value;
+  if(characteristicUuid == '0x7c80')
+  {
+  	<!-- AccValue = value.getUint16(0).toString(16); -->
+	
+	let accelerometerX = event.target.value.getInt16(0) / 1024 * 10;
+    let accelerometerY = event.target.value.getInt16(2) / 1024 * 10;
+    let accelerometerZ = event.target.value.getInt16(4) / 1024 * 10;
+	
+	 var data = {
+      accelerometer: {
+        x: accelerometerX,
+        y: accelerometerY,
+        z: accelerometerZ
+      }
+    }
 
+    state = {
+      accelerometer: data.accelerometer
+    }
+
+    heartRates.push(state.accelerometer.z);
+  }
+  else if(characteristicUuid == '0x7c83')
+  {
+	GyroValue = a.join(' ');
+	let gyroscopeX = event.target.value.getInt16(0);
+    let gyroscopeY = event.target.value.getInt16(2);
+    let gyroscopeZ = event.target.value.getInt16(4);
+	
+	 var data = {
+      gyroscope: {
+        x: gyroscopeX,
+        y: gyroscopeY,
+        z: gyroscopeZ
+      }
+    }
+
+    state = {
+      gyroscope: data.gyroscope
+    }
+    heartRates.push(state.gyroscope.z);
+  }
+  else if(characteristicUuid == '0x7c84')
+  {
+	QuaternionValue = a.join(' ');
+	
+	let orientationW = event.target.value.getInt16(0) / 16384;
+    let orientationX = event.target.value.getInt16(2) / 16384;
+    let orientationY = event.target.value.getInt16(4) / 16384;
+    let orientationZ = event.target.value.getInt16(6) / 16384;
+	
+	 var data = {
+      orientation: {
+        x: orientationX,
+        y: orientationY,
+        z: orientationZ,
+        w: orientationW
+      }
+    }
+
+    state = {
+      orientation: data.orientation
+    }
+    // heartRates.push(state.orientation.z);
+  }
+
+ 
+	
   displayData();
+  drawWaves();
   
   if(Is_startSaving)
   {
@@ -456,45 +587,44 @@ function handleNotifications(event) {
 }
 
 function displayData(){
-    if(batteryLevel){
-      var batteryLevelDiv = document.getElementsByClassName('accelerometer-y-data')[0];
-      batteryLevelDiv.innerHTML = batteryLevel;
+    if(state.accelerometer){
+      var accelerometerXDiv = document.getElementsByClassName('accelerometer-x-data')[0];
+      accelerometerXDiv.innerHTML = state.accelerometer.x;
+
+      var accelerometerYDiv = document.getElementsByClassName('accelerometer-y-data')[0];
+      accelerometerYDiv.innerHTML = state.accelerometer.y;
+
+      var accelerometerZDiv = document.getElementsByClassName('accelerometer-z-data')[0];
+      accelerometerZDiv.innerHTML = state.accelerometer.z;
     }  
+
+	if(state.gyroscope){
+	  var gyroscopeXDiv = document.getElementsByClassName('gyroscope-x-data')[0];
+      gyroscopeXDiv.innerHTML = state.gyroscope.x;
+
+      var gyroscopeYDiv = document.getElementsByClassName('gyroscope-y-data')[0];
+      gyroscopeYDiv.innerHTML = state.gyroscope.y;
+
+      var gyroscopeZDiv = document.getElementsByClassName('gyroscope-z-data')[0];
+      gyroscopeZDiv.innerHTML = state.gyroscope.z;
+	} 
+
+	if(state.orientation){
+	  var orientationXDiv = document.getElementsByClassName('orientation-x-data')[0];
+      orientationXDiv.innerHTML = state.orientation.x;
+
+      var orientationYDiv = document.getElementsByClassName('orientation-y-data')[0];
+      orientationYDiv.innerHTML = state.orientation.y;
+
+      var orientationZDiv = document.getElementsByClassName('orientation-z-data')[0];
+      orientationZDiv.innerHTML = state.orientation.z;
+	  
+	  var orientationWDiv = document.getElementsByClassName('orientation-w-data')[0];
+      orientationWDiv.innerHTML = state.orientation.w;
+	} 
 
 }
 </script>
-
-<!-- <script> -->
-  <!-- document.querySelector('form').addEventListener('submit', function(event) { -->
-    <!-- event.stopPropagation(); -->
-    <!-- event.preventDefault(); -->
-
-    <!-- if (isWebBluetoothEnabled()) { -->
-      <!-- ChromeSamples.clearLog(); -->
-      <!-- onButtonClick(); -->
-    <!-- } -->
-  <!-- }); -->
-  
-  
-    <!-- document.querySelector('#connect').addEventListener('click', function(event) { -->
-    <!-- event.stopPropagation(); -->
-    <!-- event.preventDefault(); -->
-
-    <!-- if (isWebBluetoothEnabled()) { -->
-      <!-- ChromeSamples.clearLog(); -->
-      <!-- onButtonClick(); -->
-    <!-- } -->
-  <!-- }); -->
-  
-  <!-- document.querySelector('#stopNotifications').addEventListener('click', function(event) { -->
-    <!-- event.stopPropagation(); -->
-    <!-- event.preventDefault(); -->
-
-    <!-- if (isWebBluetoothEnabled()) { -->
-      <!-- onStopButtonClick(); -->
-    <!-- } -->
-  <!-- }); -->
-<!-- </script> -->
 
 <script>
   log = ChromeSamples.log;
@@ -574,122 +704,6 @@ function displayData(){
       renderer.render(scene, camera);
   }
 </script>  
-
-<script>
-		var lastDate = 0;
-        var data = []
-        var TICKINTERVAL = 86400000 //milisecs in one day
-        let XAXISRANGE = 777600000
-        function getDayWiseTimeSeries(baseval, count, yrange) {
-            var i = 0;
-            while (i < count) {
-                var x = baseval;
-                var y = Math.floor(Math.random() * (yrange.max - yrange.min + 1)) + yrange.min;
-
-                data.push({
-                    x, y
-                });
-                lastDate = baseval
-                baseval += TICKINTERVAL;
-                i++;
-            }
-        }
-
-        getDayWiseTimeSeries(new Date('4 Oct 2019 GMT').getTime(), 10, {
-            min: 10,
-            max: 90
-        })
-
-        function getNewSeries(baseval, yrange) {
-            var newDate = baseval + TICKINTERVAL;
-            lastDate = newDate
-
-            for(var i = 0; i< data.length - 10; i++) {
-                // IMPORTANT
-                // we reset the x and y of the data which is out of drawing area
-                // to prevent memory leaks
-                data[i].x = newDate - XAXISRANGE - TICKINTERVAL
-                data[i].y = 0
-            }
-            
-            data.push({
-                x: newDate,
-                y: Math.floor(Math.random() * (yrange.max - yrange.min + 1)) + yrange.min
-            })
-           
-        }
-
-        function resetData(){
-            // Alternatively, you can also reset the data at certain intervals to prevent creating a huge series 
-            data = data.slice(data.length - 10, data.length);
-        }
-
-        var options = {
-            chart: {
-                height: 350,
-                type: 'line',
-                animations: {
-                    enabled: true,
-                    easing: 'linear',
-                    dynamicAnimation: {
-                        speed: 1000
-                    }
-                },
-                toolbar: {
-                    show: false
-                },
-                zoom: {
-                    enabled: false
-                }
-            },
-            dataLabels: {
-                enabled: false
-            },
-            stroke: {
-                curve: 'smooth'
-            },
-            series: [{
-                data: data
-            }],
-            title: {
-                <!-- text: 'Dynamic Updating Chart', -->
-                <!-- align: 'left' -->
-            },
-            markers: {
-                size: 0
-            },
-            xaxis: {
-                type: 'datetime',
-                range: XAXISRANGE,
-            },
-            yaxis: {
-                max: 100
-            },
-            legend: {
-                show: false
-            },
-        }
-
-        var chart = new ApexCharts(
-            document.querySelector("#chart"),
-            options
-        );
-
-        chart.render();
-	
-       
-
-         window.setInterval(function () {
-         getNewSeries(lastDate, {
-                 min: 10,
-                 max: 90
-             })
-             chart.updateSeries([{
-                 data: data
-             }])
-         }, 1000)
-        
-</script> 
 </body>
 </html>   
     
